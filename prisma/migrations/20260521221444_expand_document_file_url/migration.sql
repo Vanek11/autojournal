@@ -1,0 +1,1 @@
+ALTER TABLE `documents` MODIFY COLUMN `file_url` TEXT NOT NULL;
