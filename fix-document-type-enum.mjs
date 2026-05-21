@@ -1,4 +1,17 @@
-import { DocumentType } from "@prisma/client";
+import fs from "node:fs";
+import path from "node:path";
+
+const root = process.cwd();
+
+const filePath = path.join(root, "src/app/api/documents/route.ts");
+const backupPath = path.join(root, ".backup-documents-route-document-type.ts");
+
+if (fs.existsSync(filePath)) {
+  fs.copyFileSync(filePath, backupPath);
+  console.log("backup created: .backup-documents-route-document-type.ts");
+}
+
+const content = `import { DocumentType } from "@prisma/client";
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
@@ -190,7 +203,6 @@ export async function POST(request: Request) {
     const document = await prisma.document.create({
       data: {
         vehicleId,
-        userId: user.id,
         title,
         type: documentType,
         fileUrl: blob.url,
@@ -217,3 +229,9 @@ export async function POST(request: Request) {
     );
   }
 }
+`;
+
+fs.writeFileSync(filePath, content, "utf8");
+
+console.log("updated: src/app/api/documents/route.ts");
+console.log("DocumentType enum fixed.");
