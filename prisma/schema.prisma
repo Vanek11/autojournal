@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  plan         Plan     @default(free)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sessions       Session[]
+  vehicles       Vehicle[]
+  journalEntries JournalEntry[]
+  reminders      Reminder[]
+  documents      Document[]
+
+  ownerTeamMembers  TeamMember[] @relation("TeamOwner")
+  memberTeamMembers TeamMember[] @relation("TeamMember")
+
+  subscription Subscription?
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model TeamMember {
+  id        String     @id @default(uuid())
+  ownerId   String     @map("owner_id")
+  memberId  String     @map("member_id")
+  role      MemberRole @default(viewer)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  owner  User @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  member User @relation("TeamMember", fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, memberId])
+  @@map("team_members")
+}
+
+model Vehicle {
+  id             String   @id @default(uuid())
+  ownerId        String   @map("owner_id")
+  make           String
+  model          String
+  year           Int?
+  plateNumber    String?  @map("plate_number")
+  vin            String?
+  fuelType       FuelType @default(petrol) @map("fuel_type")
+  currentMileage Int      @default(0) @map("current_mileage")
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  owner          User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  journalEntries JournalEntry[]
+  reminders      Reminder[]
+  documents      Document[]
+
+  @@map("vehicles")
+}
+
+model JournalEntry {
+  id          String           @id @default(uuid())
+  vehicleId   String           @map("vehicle_id")
+  userId      String           @map("user_id")
+  type        JournalEntryType
+  title       String
+  description String?          @db.Text
+  eventDate   DateTime         @map("event_date")
+  mileage     Int?
+  amount      Decimal?         @db.Decimal(10, 2)
+  vendor      String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("journal_entries")
+}
+
+model Reminder {
+  id             String         @id @default(uuid())
+  vehicleId      String         @map("vehicle_id")
+  userId         String         @map("user_id")
+  title          String
+  description    String?        @db.Text
+  triggerType    TriggerType    @map("trigger_type")
+  triggerDate    DateTime?      @map("trigger_date")
+  triggerMileage Int?           @map("trigger_mileage")
+  status         ReminderStatus @default(active)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reminders")
+}
+
+model Document {
+  id          String       @id @default(uuid())
+  vehicleId   String       @map("vehicle_id")
+  userId      String       @map("user_id")
+  title       String
+  type        DocumentType @default(receipt)
+  fileName    String?      @map("file_name")
+  fileUrl     String?      @map("file_url")
+  description String?      @db.Text
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+model Subscription {
+  id        String             @id @default(uuid())
+  userId    String             @unique @map("user_id")
+  plan      Plan               @default(free)
+  status    SubscriptionStatus @default(active)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+enum Plan {
+  free
+  standard
+  premium
+}
+
+enum MemberRole {
+  editor
+  viewer
+}
+
+enum FuelType {
+  petrol
+  diesel
+  gas
+  hybrid
+  electric
+  other
+}
+
+enum JournalEntryType {
+  maintenance
+  repair
+  fuel
+  expense
+  document
+  other
+}
+
+enum TriggerType {
+  date
+  mileage
+  date_and_mileage
+}
+
+enum ReminderStatus {
+  active
+  done
+  postponed
+  cancelled
+}
+
+enum DocumentType {
+  receipt
+  insurance
+  service_act
+  photo
+  pdf
+  other
+}
+
+enum SubscriptionStatus {
+  active
+  cancelled
+}
