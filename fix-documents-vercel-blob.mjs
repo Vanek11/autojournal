@@ -1,4 +1,17 @@
-import { put } from "@vercel/blob";
+import fs from "node:fs";
+import path from "node:path";
+
+const root = process.cwd();
+
+const filePath = path.join(root, "src/app/api/documents/route.ts");
+const backupPath = path.join(root, ".backup-documents-route-before-blob.ts");
+
+if (fs.existsSync(filePath)) {
+  fs.copyFileSync(filePath, backupPath);
+  console.log("backup created: .backup-documents-route-before-blob.ts");
+}
+
+const content = `import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { getCurrentUser } from "@/lib/auth";
@@ -203,3 +216,9 @@ export async function POST(request: Request) {
     );
   }
 }
+`;
+
+fs.writeFileSync(filePath, content, "utf8");
+
+console.log("updated: src/app/api/documents/route.ts");
+console.log("Documents upload now uses Vercel Blob.");
